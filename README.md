@@ -108,7 +108,7 @@ The results are decent and coherent, but fluctuate in quality. For example, the 
 
 # Live Demo
 
-Please check the [live demo](live_demo.html). This uses:
+Please check the [live demo](index.html). This uses:
 
 - Google Cloud Platform (GCP) Cloud Run to host the python code.
 - A LLM server hosted on Huggingface endpoints
