@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Query Rewriter</title>
+    <style>
+        /* --- Existing styles --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 { color: #2c3e50; margin-bottom: 20px; }
+        .container {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            opacity: 1;
+            transition: opacity 0.3s;
+        }
+        .container.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; }
+        input[type="text"], textarea, input[type="number"] {
+            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; box-sizing: border-box;
+        }
+        textarea { min-height: 100px; resize: vertical; }
+        button {
+            background-color: #3498db; color: white; border: none;
+            padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; transition: background-color 0.3s;
+        }
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #95a5a6; cursor: not-allowed; }
+        .results { margin-top: 20px; display: none; }
+        .query-box {
+            background-color: #fff; border-left: 4px solid #3498db;
+            padding: 10px 15px; margin-bottom: 10px;
+        }
+        .stats { font-size: 14px; color: #7f8c8d; margin-top: 10px; }
+        .loading {
+            display: none; margin-top: 20px; text-align: center; color: #7f8c8d;
+        }
+        .error {
+            color: #e74c3c; background-color: #fadbd8; padding: 10px; border-radius: 4px;
+            margin-top: 15px; display: none;
+        }
+
+        /* --- New spinner & overlay styles --- */
+        .init-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.9); display: flex;
+            flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9999; font-size: 18px; color: #555;
+        }
+        .init-overlay .spinner {
+            width: 40px; height: 40px; margin-bottom: 15px;
+            border: 4px solid rgba(0,0,0,0.1); border-left-color: #3498db;
+            border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <!-- Initialization overlay -->
+    <div id="init-overlay" class="init-overlay">
+        <div class="spinner"></div>
+        <div>Initiliazing Huggingface endpoint</div>
+    </div>
+
+    <div class="container" id="main-container">
+        <h1>Query Rewriter</h1>
+        <p>Enter a question below to rewrite it into concise search-engine queries.</p>
+
+        <div class="form-group">
+            <label for="question">Your Question:</label>
+            <textarea id="question" placeholder="Enter your question here..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="latency">Desired Max Latency (ms):</label>
+            <input type="number" id="latency" value="200" min="10" max="50000">
+        </div>
+
+        <button id="submit-btn" disabled>Rewrite Query</button>
+
+        <div class="loading" id="loading">
+            <p>Processing your query...</p>
+        </div>
+
+        <div class="error" id="error-message"></div>
+
+        <div class="results" id="results">
+            <h2>Rewritten Queries:</h2>
+            <div id="queries-container"></div>
+            <div class="stats" id="stats"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_SERVICE_URL = 'https://kagi-query-rewrite-543728486451.us-east4.run.app/rewrite';
+        const initOverlay = document.getElementById('init-overlay');
+        const submitBtn   = document.getElementById('submit-btn');
+        const questionInput = document.getElementById('question');
+        const latencyInput  = document.getElementById('latency');
+        const loading       = document.getElementById('loading');
+        const results       = document.getElementById('results');
+        const queriesContainer = document.getElementById('queries-container');
+        const stats         = document.getElementById('stats');
+        const errorMessage  = document.getElementById('error-message');
+        const mainContainer = document.getElementById('main-container');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Start polling until the endpoint is ready
+            pollEndpoint();
+            // Setup submit handler
+            submitBtn.addEventListener('click', handleSubmit);
+        });
+
+        async function pollEndpoint() {
+            try {
+                const resp = await fetch(API_SERVICE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: "Hi", desired_max_latency: 100 })
+                });
+                if (resp.ok) {
+                    // Endpoint is ready
+                    initOverlay.style.display = 'none';
+                    submitBtn.disabled = false;
+                    questionInput.disabled = false;
+                    latencyInput.disabled = false;
+                    return;
+                }
+            } catch (e) {
+                // ignore network errors, keep polling
+            }
+            // Try again in 2 seconds
+            setTimeout(pollEndpoint, 2000);
+        }
+
+        async function handleSubmit() {
+            const question = questionInput.value.trim();
+            const latency = parseInt(latencyInput.value, 10);
+
+            if (!question) {
+                return showError('Please enter a question.');
+            }
+            if (isNaN(latency) || latency < 10) {
+                return showError('Please enter a valid latency (minimum 10ms).');
+            }
+
+            // Reset UI
+            errorMessage.style.display = 'none';
+            results.style.display = 'none';
+            loading.style.display = 'block';
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch(API_SERVICE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question, desired_max_latency: latency })
+                });
+                if (!response.ok) {
+                    throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+                }
+                const data = await response.json();
+
+                queriesContainer.innerHTML = '';
+                data.queries.forEach(q => {
+                    const div = document.createElement('div');
+                    div.className = 'query-box';
+                    div.textContent = q;
+                    queriesContainer.appendChild(div);
+                });
+                stats.textContent = `Generated ${data.queries.length} ${data.queries.length === 1 ? 'query' : 'queries'} in ${data.elapsed_time.toFixed(2)}ms`;
+                results.style.display = 'block';
+
+            } catch (err) {
+                showError('Error: ' + err.message);
+            } finally {
+                loading.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        }
+
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            errorMessage.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+fastapi
+huggingface_hub
+llama-cpp-python
+openai
+pydantic
+requests
+uvicorn
