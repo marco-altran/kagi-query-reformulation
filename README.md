@@ -133,7 +133,96 @@ If you want to deploy your own Huggingface endpoint, you can do so at https://hu
 
 # Challenges
 
+The main challenge for this task is the 100 ms requirement. seq2seq is fast but hard to produce quality outputs whereas LLMs are inherit slow when we are talking about search-engine queries.
+
+I first discarded LLM as my intuition told me I could never optimize for sub-100 ms levels. My goal was to use a model like `google/flan-t5-small` and fine-tune it. A few roadblocks stopped me from going this route:
+
+- The query responses weren't very good. Most of the time, it was garbage. Fine tune would maybe solve the issue, but after seeing models already fine-tuned, I wasn't satisfied with the results. You can see it for yourself in [query_rewrite_t5_fine_tune_original.py](query_rewrite_t5_fine_tune_original.py):
+
+```
+Original
+
+Input: In what year was the winner of the 44th edition of the Miss World competition born?
+Target: on when was the first miss world event?
+Target: where in the world was the last victoria hendrix born?
+Target: when was thomas bernstein born?
+
+
+Input: Who lived longer, Nikola Tesla or Milutin Milankovic?
+Target: who was a great inventor of light-fueled electric cars and what did him do for his own sake?
+Target: which scientist lived more hours than milutin Milankovic?
+Target: who lived longer Nikola Tesla or Milutin Milankovic?
+
+
+Input: Author David Chanoff has collaborated with a U.S. Navy admiral who served as the ambassador to the United Kingdom under which President?
+Target: who was the ambassador to the us under which u.s government?
+Target: when was harriet forrest in the ambassador
+Target: who was the ambassador to scotland
+
+
+Input: Create a table for top noise cancelling headphones that are not expensive
+Target: can i use bluetooth headphones as noise cancelling headphones?
+Target: idasound sound cancellation table for headphones
+Target: average wireless headphones table
+
+
+Input: What are some ways to do fast query reformulation
+Target: Query reformulation on a laptop
+Target: how to do query reformulation fast
+Target: Query reformulating technique definition
+
+
+Beam search
+
+Input: In what year was the winner of the 44th edition of the Miss World competition born?
+Target: who is the winner of the 44th edition of the miss world?
+Target: who is the winner of the 44th miss world competition?
+Target: who is the winner of the 44th edition of miss world?
+
+
+Input: Who lived longer, Nikola Tesla or Milutin Milankovic?
+Target: Nikola Tesla or Milutin Milankovic
+Target: Nikola Tesla or Milutin Milankovic?
+Target: who lived longer Nikola Tesla or Milutin Milankovic
+
+
+Input: Author David Chanoff has collaborated with a U.S. Navy admiral who served as the ambassador to the United Kingdom under which President?
+Target: which author has collaborated with an admiral who served as the ambassador to the United Kingdom under which president?
+Target: which author collaborated with an admiral who served as the ambassador to the United Kingdom under which president?
+Target: which author collaborated with a admiral who served as the ambassador to the United Kingdom under which president?
+
+
+Input: Create a table for top noise cancelling headphones that are not expensive
+Target: what is the best noise cancelling headphones
+Target: what is the best noise cancelling headphones?
+Target: what is the best noise cancelling headphones for kids
+
+
+Input: What are some ways to do fast query reformulation
+Target: what is the fastest way to reformulate a query?
+Target: what is the fastest way to reformulate a query
+Target: how to reformulate a query in excel
+```
+
+Even using a more powerful T5 model that is a lot slower, the results were still nowhere near on what a query reformulation should be.
+
+I realized that the task of a query reformulation requires query interpretation, and be able to follow instructions. I then proceeded to explore the LLM space in search for a model that would be very good at following instructions, small, and fast.
+
+Upon my search, I found that Qwen 2.5 0.5B was producing decent results, sometimes very similar to the examples, and was taking about 1~2s per query. Then it was time to optimize the code:
+
+- Utilize Q4_O quantization (~500 ms)
+- Use llama_cpp_python instead of the transformers library (~200 ms)
+- Refine the system prompt by adding a one-shot example + XML tags. This made the instruction easier to follow, which improved the output quality and latency (~200 ms)
+- Enable streaming, be smart about stop tokens, and stop early if either a) we already have three complete queries, b) one query has already been completed and response time is beyond 75% of the threshold, or c) the response time is beyond 90% of the threshold. This added latency consistency with the tradeoff of small quality degradation.
+
+This enabled me to reduce the latency from 1~2s to consistently below 100ms on my Macbook with CPU only.
+
+When creating the live demo, I went through the same optimization pain points of defining the proper infrastructure and adapting the current code to be fast on the cloud. Since this is just a demo, I was constrained to using services that pay per use, not per idle resources. I was forced to use cloud functions that all have a big overhead, plus had to deal with TLS handshake, request hops, etc.
+
+The current live demo is in the 200-300 ms. With dedicated hardware that lives in the same region & zone, it should be possible to get in the 80-120 ms range.
 
 # Limitations
 
+The 100 ms requirement is met with a very specific hardware. In my case, it was a powerful Macbook M3 Max that happens to be my daily work machine. I also tested with an older Macbook Intel i7 and got response times around 250-300ms.
 
+The responses are also far from perfect. Sometimes, it's a great answer, only to rerun the same request to get a bad answer. If more time were given, I would explore the idea of fine-tuning the LLM params by setting temperature to 0.0 and adjusting the system prompt to produce consistent quality answers. Fine-tuning an LLM could also yield interesting results: these models are trained on a variety of topics. Doing an extra round of fine-tuning should aid in the task of query reformulation. 

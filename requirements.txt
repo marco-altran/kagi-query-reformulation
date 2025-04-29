@@ -5,3 +5,7 @@ openai
 pydantic
 requests
 uvicorn
+
+# only for query_rewrite_t5_fine_tune_original.py
+transformers==4.51.3
+torch
