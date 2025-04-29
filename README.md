@@ -108,8 +108,7 @@ The results are decent and coherent, but fluctuate in quality. For example, the 
 
 # Live Demo
 
-[//]: # (TODO Add Demo link)
-Please check the [live demo](). This uses:
+Please check the [live demo](live_demo.html). This uses:
 
 - Google Cloud Platform (GCP) Cloud Run to host the python code.
 - A LLM server hosted on Huggingface endpoints
@@ -130,7 +129,7 @@ To deploy the application to the cloud:
 - Run `./deploy.sh`. You need to have Docker installed and running, as well as gcloud CLI.
 - Update `live_demo.html` by pointing to your Cloud Run URL.
 
-If you want to deploy your own Huggingface endpoint, you can do so at https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF -> deploy -> HF Inference Endpoints and then update `ENDPOINT_URL_GCP` in `api_cloud.py` with your service URL.
+If you want to deploy your own Huggingface endpoint, you can do so at https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF -> deploy -> HF Inference Endpoints and then update `ENDPOINT_URL_GCP` in `api_cloud.py` with your service URL. Select GCP with 8x CPU for similar results.
 
 # Challenges
 

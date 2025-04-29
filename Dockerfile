@@ -34,5 +34,4 @@ COPY api_cloud.py .
 
 EXPOSE 8080
 
-# Launch FastAPI via Uvicorn (ASGI) instead of WSGI
 CMD ["uvicorn", "api_cloud:app", "--host", "0.0.0.0", "--port", "8080"]
