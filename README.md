@@ -221,8 +221,10 @@ When creating the live demo, I went through the same optimization pain points of
 
 The current live demo is in the 200-300 ms. With dedicated hardware that lives in the same region & zone, it should be possible to get in the 80-120 ms range.
 
-# Limitations
+# Limitations & Future Work
 
 The 100 ms requirement is met with a very specific hardware. In my case, it was a powerful Macbook M3 Max that happens to be my daily work machine. I also tested with an older Macbook Intel i7 and got response times around 250-300ms.
 
-The responses are also far from perfect. Sometimes, it's a great answer, only to rerun the same request to get a bad answer. If more time were given, I would explore the idea of fine-tuning the LLM params by setting temperature to 0.0 and adjusting the system prompt to produce consistent quality answers. Fine-tuning an LLM could also yield interesting results: these models are trained on a variety of topics. Doing an extra round of fine-tuning should aid in the task of query reformulation. 
+The responses are also far from perfect. Sometimes, it's a great answer, only to rerun the same request to get a bad answer. If more time were given, I would explore the idea of fine-tuning the LLM params by setting temperature to 0.0 and adjusting the system prompt to produce consistent quality answers. Fine-tuning an LLM could also yield interesting results: these models are trained on a variety of topics. Doing an extra round of fine-tuning should aid in the task of query reformulation.
+
+Considering that 85% of the queries are not new, a key-value cache would be surprising effective to returning fast responses. One could build an async systems that fetches a more powerful LLM and store the results for posterior use. Not only the majority of the responses would be delivered instantly, but the response quality would also improve.
