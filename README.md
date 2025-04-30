@@ -119,14 +119,18 @@ You can check the files that made up the live demo:
 - `live_demo.html`
 - `api_cloud.py`
 - `Dockerfile`
-- `deploy.sh`
+- `deploy_cloud.sh`
 
 Although I managed to get the inference responses below 100 ms, there is significant overhead when hosting in a cost-effective cloud environment, and the response times were in the 200-300 ms range.
+
+The response time you see at the end is the total time it took to run the inference:
+
+![img.png](img.png)
 
 To deploy the application to the cloud:
 
 - Copy `.env.example` to `.env` and fill `HF_API_KEY` with your Huggingface token.
-- Run `./deploy.sh`. You need to have Docker installed and running, as well as gcloud CLI.
+- Run `./deploy_cloud.sh`. You need to have Docker installed and running, as well as gcloud CLI.
 - Update `live_demo.html` by pointing to your Cloud Run URL.
 
 If you want to deploy your own Huggingface endpoint, you can do so at https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF -> deploy -> HF Inference Endpoints and then update `ENDPOINT_URL_GCP` in `api_cloud.py` with your service URL. Select GCP with 8x CPU for similar results.
