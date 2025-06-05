@@ -108,7 +108,8 @@ The results are decent and coherent, but fluctuate in quality. For example, the 
 
 # Live Demo
 
-Please check the [live demo](https://marco-altran.github.io/kagi-query-reformulation/). This uses:
+~~Please check the [live demo](https://marco-altran.github.io/kagi-query-reformulation/)~~  *Due to costs, the live demo is no longer available.*
+ This uses:
 
 - Google Cloud Platform (GCP) Cloud Run to host the python code.
 - A LLM server hosted on Huggingface endpoints
